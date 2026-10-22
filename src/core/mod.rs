@@ -4,5 +4,6 @@ pub mod crypto;
 pub mod dns;
 pub mod duckdns;
 pub mod history;
+pub mod mesa_downloader;
 pub mod updater;
 pub mod webhook;

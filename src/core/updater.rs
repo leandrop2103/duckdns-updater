@@ -1,7 +1,7 @@
 //! # Módulo de Atualização Automática (`core/updater.rs`)
 //!
 //! Este módulo gerencia a verificação, download e substituição do executável da aplicação
-//! diretamente dos Releases oficiais do GitHub (`lpl2103/duckdns-updater`).
+//! diretamente dos Releases oficiais do GitHub com fallbacks e retry transparente.
 //!
 //! ## Técnica de Substituição Quente no Windows:
 //! No Windows, um executável em execução não pode ser sobrescrito diretamente.
@@ -16,10 +16,11 @@ use std::io::{BufWriter, Read, Write};
 use std::process::Command;
 use std::time::Duration;
 
-pub const GITHUB_API_LATEST: &str =
-    "https://api.github.com/repos/lpl2103/duckdns-updater/releases/latest";
-pub const GITHUB_DIRECT_DOWNLOAD: &str =
-    "https://github.com/lpl2103/duckdns-updater/releases/latest/download/duckdns-updater.exe";
+/// Repositórios de distribuição no GitHub (ordem de prioridade com espelhos de contingência)
+pub const GITHUB_DIST_REPOS: &[&str] = &[
+    "leandrop2103/duckdns-updater",
+    "lpl2103/duckdns-updater",
+];
 
 /// Informações sobre uma versão remota disponível
 #[derive(Debug, Clone)]
@@ -60,7 +61,20 @@ pub fn is_newer_version(remote: &str, current: &str) -> bool {
     }
 }
 
-/// Verifica se existe uma nova versão disponível no GitHub Releases.
+/// URL da API "latest release" para um determinado repositório
+fn github_api_latest(repo: &str) -> String {
+    format!("https://api.github.com/repos/{}/releases/latest", repo)
+}
+
+/// URL de download direto do binário na última release
+fn github_direct_download(repo: &str) -> String {
+    format!(
+        "https://github.com/{}/releases/latest/download/duckdns-updater.exe",
+        repo
+    )
+}
+
+/// Verifica se existe uma nova versão disponível nos repositórios GitHub em ordem de prioridade.
 pub fn check_for_updates() -> Option<RemoteVersionInfo> {
     let current_version = env!("CARGO_PKG_VERSION");
 
@@ -69,69 +83,108 @@ pub fn check_for_updates() -> Option<RemoteVersionInfo> {
         .timeout(Duration::from_secs(8))
         .build();
 
-    let resp = agent
-        .get(GITHUB_API_LATEST)
-        .set("User-Agent", &format!("DuckDnsUpdater/{}", current_version))
-        .set("Accept", "application/vnd.github.v3+json")
-        .call()
-        .ok()?;
+    for repo in GITHUB_DIST_REPOS {
+        let api_url = github_api_latest(repo);
+        let resp = match agent
+            .get(&api_url)
+            .set("User-Agent", &format!("DuckDnsUpdater/{}", current_version))
+            .set("Accept", "application/vnd.github.v3+json")
+            .call()
+        {
+            Ok(r) if r.status() == 200 => r,
+            _ => continue,
+        };
 
-    if resp.status() != 200 {
-        return None;
-    }
+        let Ok(json_str) = resp.into_string() else {
+            continue;
+        };
+        let Ok(json) = serde_json::from_str::<serde_json::Value>(&json_str) else {
+            continue;
+        };
 
-    let json_str = resp.into_string().ok()?;
-    let json = serde_json::from_str::<serde_json::Value>(&json_str).ok()?;
+        let tag_name = json.get("tag_name").and_then(|v| v.as_str()).unwrap_or("");
+        let clean_tag = tag_name.trim().trim_start_matches(['v', 'V']);
+        let body = json
+            .get("body")
+            .and_then(|v| v.as_str())
+            .unwrap_or("Melhorias e correções de estabilidade.");
 
-    let tag_name = json.get("tag_name").and_then(|v| v.as_str()).unwrap_or("");
-    let clean_tag = tag_name.trim().trim_start_matches(['v', 'V']);
-    let body = json
-        .get("body")
-        .and_then(|v| v.as_str())
-        .unwrap_or("Melhorias e correções de estabilidade.");
-
-    let mut dl_url = GITHUB_DIRECT_DOWNLOAD.to_string();
-    if let Some(assets) = json.get("assets").and_then(|a| a.as_array()) {
-        for asset in assets {
-            if asset.get("name").and_then(|n| n.as_str()) == Some("duckdns-updater.exe") {
-                if let Some(url) = asset.get("browser_download_url").and_then(|u| u.as_str()) {
-                    dl_url = url.to_string();
-                    break;
+        let mut dl_url = github_direct_download(repo);
+        if let Some(assets) = json.get("assets").and_then(|a| a.as_array()) {
+            for asset in assets {
+                if asset.get("name").and_then(|n| n.as_str()) == Some("duckdns-updater.exe") {
+                    if let Some(url) = asset.get("browser_download_url").and_then(|u| u.as_str()) {
+                        dl_url = url.to_string();
+                        break;
+                    }
                 }
             }
         }
+
+        if is_newer_version(clean_tag, current_version) {
+            return Some(RemoteVersionInfo {
+                version: clean_tag.to_string(),
+                download_url: dl_url,
+                release_notes: body.to_string(),
+            });
+        }
+        return None;
     }
 
-    if is_newer_version(clean_tag, current_version) {
-        Some(RemoteVersionInfo {
-            version: clean_tag.to_string(),
-            download_url: dl_url,
-            release_notes: body.to_string(),
-        })
-    } else {
-        None
-    }
+    None
 }
 
-/// Executa o download da nova versão e realiza a substituição a quente do executável no Windows.
+/// Executa o download da nova versão com fallback de espelhos e realiza a substituição a quente do executável.
 pub fn perform_auto_update<F>(custom_url: Option<String>, progress_callback: F) -> Result<(), String>
 where
     F: Fn(UpdateStatus) + Send + 'static,
 {
     progress_callback(UpdateStatus::Downloading(0.0));
 
-    let download_url = custom_url.unwrap_or_else(|| GITHUB_DIRECT_DOWNLOAD.to_string());
+    let mut candidate_urls: Vec<String> = Vec::new();
+    if let Some(url) = custom_url {
+        candidate_urls.push(url);
+    }
+    for repo in GITHUB_DIST_REPOS {
+        let url = github_direct_download(repo);
+        if !candidate_urls.contains(&url) {
+            candidate_urls.push(url);
+        }
+    }
 
     let agent = ureq::AgentBuilder::new()
         .redirects(5)
         .timeout(Duration::from_secs(90))
         .build();
 
-    let response = agent
-        .get(&download_url)
-        .set("User-Agent", "DuckDnsUpdater/Updater")
-        .call()
-        .map_err(|e| format!("Falha ao conectar no endereço de atualização: {}", e))?;
+    let mut response_opt = None;
+    let mut last_err = String::new();
+
+    for download_url in &candidate_urls {
+        match agent
+            .get(download_url)
+            .set("User-Agent", "DuckDnsUpdater/Updater")
+            .call()
+        {
+            Ok(resp) if resp.status() == 200 => {
+                response_opt = Some(resp);
+                break;
+            }
+            Ok(resp) => {
+                last_err = format!("HTTP {} ao acessar {}", resp.status(), download_url);
+            }
+            Err(e) => {
+                last_err = format!("Erro ao acessar {}: {}", download_url, e);
+            }
+        }
+    }
+
+    let response = response_opt.ok_or_else(|| {
+        format!(
+            "Falha ao conectar aos servidores de atualização: {}",
+            last_err
+        )
+    })?;
 
     let content_length = response
         .header("Content-Length")

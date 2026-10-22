@@ -117,7 +117,7 @@ impl DuckDnsApp {
                 loop {
                     #[cfg(target_os = "windows")]
                     unsafe {
-                        use winapi::um::winuser::{
+                        use crate::core::mesa_downloader::win32::{
                             DispatchMessageW, PeekMessageW, TranslateMessage, PM_REMOVE,
                         };
                         let mut msg = std::mem::zeroed();
@@ -771,7 +771,7 @@ impl eframe::App for DuckDnsApp {
                                 .color(egui::Color32::WHITE),
                         );
                         ui.label(
-                            egui::RichText::new("⚡ Vibecodado com Rust + egui")
+                            egui::RichText::new("\u{f0e7} Vibecodado com Rust + egui")
                                 .size(11.0)
                                 .color(egui::Color32::from_rgb(0, 120, 212)),
                         );
@@ -1054,7 +1054,7 @@ impl eframe::App for DuckDnsApp {
                     if ui
                         .add(
                             egui::Button::new(
-                                egui::RichText::new("⚙ Sobre")
+                                egui::RichText::new("\u{f013} Sobre")
                                     .size(12.0)
                                     .strong()
                                     .color(egui::Color32::from_rgb(180, 180, 180)),
@@ -1413,14 +1413,14 @@ impl eframe::App for DuckDnsApp {
                 if columns[0]
                     .add_sized(
                         [columns[0].available_width(), 32.0],
-                        egui::Button::new("💾 Salvar  (Ctrl+S)"),
+                        egui::Button::new("\u{f0c7} Salvar  (Ctrl+S)"),
                     )
                     .clicked()
                 {
                     self.save_settings();
                 }
 
-                let force_btn = egui::Button::new("⚡ Atualizar  (Ctrl+U)")
+                let force_btn = egui::Button::new("\u{f0e7} Atualizar  (Ctrl+U)")
                     .fill(egui::Color32::from_rgb(0, 120, 212));
                 if columns[1]
                     .add_sized(
@@ -1439,7 +1439,7 @@ impl eframe::App for DuckDnsApp {
                 if columns[0]
                     .add_sized(
                         [columns[0].available_width(), 32.0],
-                        egui::Button::new("📌 Ocultar  (Esc)"),
+                        egui::Button::new("\u{f08d} Ocultar  (Esc)"),
                     )
                     .clicked()
                 {
@@ -1448,9 +1448,9 @@ impl eframe::App for DuckDnsApp {
                 }
 
                 let hist_label = if self.show_history_panel {
-                    "📋 Ocultar Histórico"
+                    "\u{f1da} Ocultar Histórico"
                 } else {
-                    "📋 Histórico"
+                    "\u{f1da} Histórico"
                 };
                 if columns[1]
                     .add_sized(
@@ -1746,8 +1746,7 @@ fn create_tray() -> (
     (tray_icon, Some(open_id), Some(force_id), Some(exit_id))
 }
 
-const VICTOR_MONO_NERD: &[u8] =
-    include_bytes!("../../assets/fonts/VictorMonoNerdFont-Regular.ttf");
+const MONACO_FIRA_NERD_ZLIB: &[u8] = include_bytes!(concat!(env!("OUT_DIR"), "/font.zlib"));
 
 fn apply_winui3_theme(ctx: &egui::Context) {
     let mut visuals = egui::Visuals::dark();
@@ -1787,12 +1786,15 @@ fn apply_winui3_theme(ctx: &egui::Context) {
 
     let mut fonts = egui::FontDefinitions::default();
 
-    // ── Embed Victor Mono Nerd Font diretamente no executável ───────────────
+    // ── Embed Monaco Fira Nerd Font diretamente no executável (descomprimido via zlib) ──
     // Garante que todos os glifos, símbolos, ícones Nerd Font e ligaduras
     // funcionem perfeitamente em qualquer computador, sem depender de fontes locais.
+    let font_bytes = miniz_oxide::inflate::decompress_to_vec_zlib(MONACO_FIRA_NERD_ZLIB)
+        .unwrap_or_else(|_| Vec::new());
+
     fonts.font_data.insert(
-        "victor_mono_nerd".to_owned(),
-        egui::FontData::from_static(VICTOR_MONO_NERD),
+        "monaco_fira_nerd".to_owned(),
+        egui::FontData::from_owned(font_bytes),
     );
 
     // Texto Proporcional padrão: Segoe UI (se disponível no Windows)
@@ -1812,19 +1814,19 @@ fn apply_winui3_theme(ctx: &egui::Context) {
         }
     }
 
-    // Adiciona Victor Mono Nerd Font como fallback primário de Proportional para símbolos e ícones
+    // Adiciona Monaco Fira Nerd Font como fallback primário de Proportional para símbolos e ícones
     fonts
         .families
         .entry(egui::FontFamily::Proportional)
         .or_default()
-        .push("victor_mono_nerd".to_owned());
+        .push("monaco_fira_nerd".to_owned());
 
-    // Define Victor Mono Nerd Font como fonte primária para Monospace (IPs, tokens, históricos)
+    // Define Monaco Fira Nerd Font como fonte primária para Monospace (IPs, tokens, históricos)
     fonts
         .families
         .entry(egui::FontFamily::Monospace)
         .or_default()
-        .insert(0, "victor_mono_nerd".to_owned());
+        .insert(0, "monaco_fira_nerd".to_owned());
 
     ctx.set_fonts(fonts);
 }

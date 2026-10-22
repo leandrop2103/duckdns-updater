@@ -34,7 +34,7 @@ Copy-Item -Force target\release\duckdns-updater.exe duckdns-updater.exe
 ---
 
 ## 🔄 4. Auto-Updater e Substituição Quente (Hot-Swap)
-- O auto-atualizador (`src/core/updater.rs`) consulta a API do GitHub (`lpl2103/duckdns-updater/releases/latest`).
+- O auto-atualizador (`src/core/updater.rs`) consulta a API do GitHub (`leandrop2103/duckdns-updater/releases/latest`, com fallback para `lpl2103`).
 - No Windows, a substituição em execução ocorre por rename atômico:
   1. Download do binário novo para `duckdns-updater.exe.new`.
   2. Executável em execução renomeado para `duckdns-updater.exe.old`.
@@ -44,19 +44,19 @@ Copy-Item -Force target\release\duckdns-updater.exe duckdns-updater.exe
 
 ---
 
-## 🚀 5. Regra de Publicação no GitHub (`lpl2103/duckdns-updater`)
+## 🚀 5. Regra de Publicação no GitHub (`leandrop2103/duckdns-updater`)
 Sempre que concluir um ciclo de melhorias ou nova versão:
 ```powershell
 .\build_and_release.ps1 -Notes "Descrição das melhorias"
 ```
 Ou manualmente:
 ```powershell
-git add Cargo.toml Cargo.lock duckdns-updater.exe dist/duckdns-updater.exe src/ build.rs README.md GEMINI.md AGENTS.md build_and_verify.ps1 build_and_release.ps1
+git add Cargo.toml Cargo.lock duckdns-updater.exe dist/duckdns-updater.exe src/ build.rs README.md GEMINI.md AGENTS.md build_and_verify.ps1 build_and_release.ps1 .gitignore eframe-patched/ assets/
 git commit -m "release: v<VERSÃO> - <Notas>"
 git push origin master
 git tag -a v<VERSÃO> -m "Release v<VERSÃO>"
 git push origin v<VERSÃO>
-gh release create v<VERSÃO> dist/duckdns-updater.exe --repo lpl2103/duckdns-updater --title "DuckDNS Updater v<VERSÃO>" --notes "<Notas>"
+gh release create v<VERSÃO> dist/duckdns-updater.exe --repo leandrop2103/duckdns-updater --title "DuckDNS Updater v<VERSÃO>" --notes "<Notas>"
 ```
 
 ---

@@ -6,7 +6,20 @@
 *.new
 *.tmp
 *.bak
+*.log
+.gl_crash
+
+# Configurações e credenciais locais do usuário
+duckdns_config.json
+duckdns_history.json
+
+# Recursos compilados intermediários
 assets/*.o
 assets/*.rc
+
+# Ferramentas auxiliares locais de processamento de imagem
+tools/
+
+# IDE
 .vscode/
 .idea/

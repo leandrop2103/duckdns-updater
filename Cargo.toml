@@ -1,14 +1,18 @@
 [package]
 name = "duckdns-updater"
-version = "1.2.2"
+version = "1.3.0"
 edition = "2021"
 authors = ["Leandro Pinheiro <engenharia@duckdns-updater.local>"]
 description = "Atualizador nativo de IP público para DuckDNS com WinUI 3 Fluent Dark, Multi-Domínio, Auto-Start e Auto-Updater"
 
 [dependencies]
-eframe = "0.29"
-egui = "0.29"
-ureq = { version = "2.10", features = ["json"] }
+# eframe/egui — somente o backend Glow (OpenGL). Sem `default_fonts` (a fonte Nerd Font é embutida),
+# sem `accesskit`, `x11` e `wayland` (irrelevantes no Windows): reduz tamanho e tempo de compilação.
+# `egui` é reexportado por `eframe::egui`, por isso não é declarado diretamente.
+eframe = { version = "0.29", default-features = false, features = ["glow"] }
+
+# Cliente HTTP leve (rustls). Sem `gzip`: nenhum endpoint usado precisa de compressão.
+ureq = { version = "2.10", default-features = false, features = ["tls", "json"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 chrono = { version = "0.4", default-features = false, features = ["clock", "std"] }
@@ -16,11 +20,14 @@ tray-icon = "0.19"
 notify-rust = "4.11"
 base64 = "0.22"
 
+# SHA-256 para validar DLLs do Mesa3D e o executável baixado pelo auto-updater
+sha2 = { version = "0.10", default-features = false }
+
+# Descompressor da fonte Nerd Font embutida (comprimida em tempo de build)
+miniz_oxide = { version = "0.8", default-features = false, features = ["with-alloc"] }
 
 [target.'cfg(windows)'.dependencies]
-winapi = { version = "0.3", features = ["winuser", "winnt"] }
 winreg = "0.55"
-
 
 [profile.release]
 opt-level = "z"
@@ -32,4 +39,9 @@ strip = true
 [build-dependencies]
 embed-resource = "2"
 image = { version = "0.25", default-features = false, features = ["ico", "png"] }
+miniz_oxide = { version = "0.8", default-features = false, features = ["with-alloc"] }
 
+# eframe 0.29.1 com correção para drivers Intel HD antigos: o fallback de contexto OpenGL
+# usa o perfil Compatibility em vez de OpenGL ES (que esses drivers não suportam).
+[patch.crates-io]
+eframe = { path = "eframe-patched" }

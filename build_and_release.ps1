@@ -29,16 +29,16 @@ if (-not (Test-Path $outputBinary)) {
     exit 1
 }
 
-# 3. Publicacao no Git (lpl2103/duckdns-updater)
-Write-Host "[*] Enviando alteracoes para git (lpl2103/duckdns-updater)..." -ForegroundColor Cyan
-git add Cargo.toml Cargo.lock duckdns-updater.exe dist/duckdns-updater.exe src/ assets/ build.rs README.md GEMINI.md AGENTS.md build_and_verify.ps1 build_and_release.ps1 .gitignore
+# 3. Publicacao no Git (leandrop2103/duckdns-updater)
+Write-Host "[*] Enviando alteracoes para git (leandrop2103/duckdns-updater)..." -ForegroundColor Cyan
+git add Cargo.toml Cargo.lock duckdns-updater.exe dist/duckdns-updater.exe src/ assets/ build.rs README.md GEMINI.md AGENTS.md build_and_verify.ps1 build_and_release.ps1 .gitignore eframe-patched/
 git commit -m "release: v$version - $Notes"
 git push origin master
 git tag -a "v$version" -m "Release v$version"
 git push origin "v$version"
 
-# 4. Publicacao da Release no GitHub (lpl2103/duckdns-updater)
+# 4. Publicacao da Release no GitHub (leandrop2103/duckdns-updater)
 Write-Host "[*] Publicando release v$version no GitHub..." -ForegroundColor Cyan
-gh release create "v$version" "$outputBinary" --repo "lpl2103/duckdns-updater" --title "DuckDNS Updater v$version" --notes "$Notes"
+gh release create "v$version" "$outputBinary" --repo "leandrop2103/duckdns-updater" --title "DuckDNS Updater v$version" --notes "$Notes"
 
 Write-Host "`n[SUCESSO] DuckDNS Updater v$version publicado com sucesso!" -ForegroundColor Green
