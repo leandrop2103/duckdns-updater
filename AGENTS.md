@@ -6,6 +6,6 @@ Este repositório segue estritamente as diretrizes definidas em [GEMINI.md](file
 2. **Build e Verificação de Ícone/PE:** Utilizar sempre `.\build_and_verify.ps1` para compilar em modo release com recursos e ícones PE validados.
 3. **Cópia de Binários na Raiz:** Manter o executável atualizado diretamente na raiz do projeto (`duckdns-updater.exe`) e em `dist/duckdns-updater.exe`.
 4. **Auto-Updater Funcional:** O executável possui auto-atualizador integrado apontando para `leandrop2103/duckdns-updater` (com fallback em `lpl2103/duckdns-updater`).
-5. **Publicação Automática:**
-   - Commit + Push + Tag `v<VERSÃO>` no repositório `leandrop2103/duckdns-updater`.
-   - Release com asset `dist/duckdns-updater.exe` via `gh release create` (ou usando `.\build_and_release.ps1`).
+5. **Publicação no GitHub (Apenas Sob Demanda):**
+   - **NÃO fazer push nem criar releases automaticamente.**
+   - O push, tag e release no GitHub só devem ser executados quando o usuário pedir explicitamente.

@@ -44,10 +44,14 @@ Copy-Item -Force target\release\duckdns-updater.exe duckdns-updater.exe
 
 ---
 
-## 🚀 5. Regra de Publicação no GitHub (`leandrop2103/duckdns-updater`)
-Sempre que concluir um ciclo de melhorias ou nova versão:
+## 🛑 5. Regra de Publicação no GitHub (SOMENTE SOB DEMANDA)
+
+> [!IMPORTANT]
+> **NUNCA faça git push ou criação de releases automaticamente.**
+> O envio para o repositório remoto e criação de release no GitHub devem ser feitos **apenas quando o usuário solicitar explicitamente**.
+> Quando o usuário solicitar a publicação, execute:
 ```powershell
-.\build_and_release.ps1 -Notes "Descrição das melhorias"
+.\build_and_release.ps1 -Notes "Descrição das melhorias" -Push
 ```
 Ou manualmente:
 ```powershell

@@ -1,6 +1,6 @@
 [package]
 name = "duckdns-updater"
-version = "1.3.0"
+version = "1.3.1"
 edition = "2021"
 authors = ["Leandro Pinheiro <engenharia@duckdns-updater.local>"]
 description = "Atualizador nativo de IP público para DuckDNS com WinUI 3 Fluent Dark, Multi-Domínio, Auto-Start e Auto-Updater"

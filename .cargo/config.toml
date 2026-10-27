@@ -1,2 +1,9 @@
-# Target is inherited from the default toolchain (x86_64-pc-windows-gnu)
-# so builds go directly to target/debug/ and target/release/
+# Configuração de build para garantir que executáveis sejam 100% autocontidos e portáteis.
+# No Windows (gnullvm/gnu), '+crt-static' e '-static' embutem as bibliotecas de runtime e unwinding (libunwind.a / libgcc),
+# eliminando dependências externas como libunwind.dll quando o .exe é transferido para outro computador.
+
+[target.'cfg(target_os = "windows")']
+rustflags = [
+    "-C", "target-feature=+crt-static",
+    "-C", "link-arg=-static",
+]
